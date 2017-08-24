@@ -29,10 +29,12 @@ public class ProxyHelper {
      * @param port
      */
     public static void setProxy(Context context, String ip, int port) {
-        if (Build.VERSION.SDK_INT >= 21) {
+        if (Build.VERSION.SDK_INT < 21) {
+            setWifiProxySettings(context, ip, port);
+        } else if (Build.VERSION.SDK_INT >= 21 && Build.VERSION.SDK_INT < 25) {
             setWifiProxyFor5x(context, ip, port);
         } else {
-            setWifiProxySettings(context, ip, port);
+            setWifiProxyFor7x(context, ip, port);
         }
     }
 
@@ -241,6 +243,8 @@ public class ProxyHelper {
 
     }
 
+
+
     /**
      * 5.x 系列设置代理
      *
@@ -311,4 +315,73 @@ public class ProxyHelper {
         }
         return configuration;
     }
+
+
+    /*************************************/
+    /**
+     * 5.x取消代理设置
+     */
+    @TargetApi(24)
+    static void resetSetHttpProxyFor7x(Context context) {
+
+        ProxyInfo mInfo = null;
+        try {
+            WifiManager wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+            WifiConfiguration configuration = getCurrentWifiConfiguration(wifiManager);
+            mInfo = ProxyInfo.buildDirectProxy(null, 0);
+            if (configuration != null) {
+                Class<?> clazz = Class.forName("android.net.wifi.WifiConfiguration");
+                Class<?> parmars = Class.forName("android.net.ProxyInfo");
+                Method method = clazz.getMethod("setHttpProxy", parmars);
+                method.invoke(configuration, mInfo);
+                Object mIpConfiguration = getDeclaredFieldObject(configuration, "mIpConfiguration");
+                setEnumField(mIpConfiguration, "NONE", "proxySettings");
+                setDeclardFildObject(configuration, "mIpConfiguration", mIpConfiguration);
+
+                // 保存设置
+                wifiManager.updateNetwork(configuration);
+                wifiManager.disconnect();
+                wifiManager.reconnect();
+            }
+        } catch (Exception e) {
+        }
+
+    }
+
+
+
+    /**
+     * 5.x 系列设置代理
+     *
+     * @param context
+     * @param host
+     * @param port
+     */
+    @TargetApi(24)
+    static void setWifiProxyFor7x(Context context, String host, int port) {
+        ProxyInfo mInfo = null;
+        try {
+            WifiManager wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+            WifiConfiguration config = getCurrentWifiConfiguration(wifiManager);
+            mInfo = ProxyInfo.buildDirectProxy(host, port);
+            if (config != null) {
+                Class<?> clazz = Class.forName("android.net.wifi.WifiConfiguration");
+                Class<?> parmars = Class.forName("android.net.ProxyInfo");
+                Method method = clazz.getMethod("setHttpProxy", parmars);
+                method.invoke(config, mInfo);
+                Object mIpConfiguration = getDeclaredFieldObject(config, "mIpConfiguration");
+
+                setEnumField(mIpConfiguration, "STATIC", "proxySettings");
+                setDeclardFildObject(config, "mIpConfiguration", mIpConfiguration);
+                // save the settings
+                wifiManager.updateNetwork(config);
+                wifiManager.disconnect();
+                wifiManager.reconnect();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
 }
