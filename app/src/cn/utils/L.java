@@ -8,11 +8,12 @@ import java.util.Locale;
 import android.text.TextUtils;
 import android.util.Log;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
  * @Copyright © 2015 Sanbo Inc. All rights reserved.
- * @Description              <pre>
+ * @Description <pre>
  * Log统一管理类,提供功能：
  * 1.log工具类支持全部打印
  * 2.支持类似C的格式化输出或Java的String.format
@@ -22,7 +23,7 @@ import org.json.JSONObject;
  *              </pre>
  * @Version: 1.0
  * @Create: 2015年6月18日 下午4:14:01
- * @Author: sanbo
+ * @author: sanbo(转载/使用.请保留原作者)
  */
 public class L {
 
@@ -32,7 +33,7 @@ public class L {
     // 是否打印bug，可以在application的onCreate函数里面初始化
     public static boolean isDebug = true;
     // 是否接受shell控制打印
-    public static boolean isControl = true;
+    public static boolean isControl = false;
     private static String DEFAULT_TAG = "sanbo";
     // 规定每段显示的长度
     private static int LOG_MAXLENGTH = 2000;
@@ -146,7 +147,18 @@ public class L {
     public static void v(String tag, Object obj, Throwable e) {
         if (obj != null) {
             if (obj instanceof String) {
-                print(MLEVEL.VERBOSE, (String)obj, e, tag);
+                String src = (String)obj;
+                try {
+                    JSONObject oo = new JSONObject(src);
+                    print(MLEVEL.VERBOSE, oo, e, tag);
+                } catch (JSONException e1) {
+                    try {
+                        JSONArray arr = new JSONArray(src);
+                        print(MLEVEL.VERBOSE, arr, e, tag);
+                    } catch (JSONException e2) {
+                        print(MLEVEL.VERBOSE, src, e, tag);
+                    }
+                }
             } else {
                 if (e == null) {
                     print(MLEVEL.VERBOSE, obj, e, tag);
@@ -165,7 +177,18 @@ public class L {
     public static void wtf(String tag, Object obj, Throwable e) {
         if (obj != null) {
             if (obj instanceof String) {
-                print(MLEVEL.WTF, (String)obj, e, tag);
+                String src = (String)obj;
+                try {
+                    JSONObject oo = new JSONObject(src);
+                    print(MLEVEL.WTF, oo, e, tag);
+                } catch (JSONException e1) {
+                    try {
+                        JSONArray arr = new JSONArray(src);
+                        print(MLEVEL.WTF, arr, e, tag);
+                    } catch (JSONException e2) {
+                        print(MLEVEL.WTF, src, e, tag);
+                    }
+                }
             } else {
                 if (e == null) {
                     print(MLEVEL.WTF, obj, e, tag);
@@ -183,7 +206,18 @@ public class L {
     public static void d(String tag, Object obj, Throwable e) {
         if (obj != null) {
             if (obj instanceof String) {
-                print(MLEVEL.DEBUG, (String)obj, e, tag);
+                String src = (String)obj;
+                try {
+                    JSONObject oo = new JSONObject(src);
+                    print(MLEVEL.DEBUG, oo, e, tag);
+                } catch (JSONException e1) {
+                    try {
+                        JSONArray arr = new JSONArray(src);
+                        print(MLEVEL.DEBUG, arr, e, tag);
+                    } catch (JSONException e2) {
+                        print(MLEVEL.DEBUG, src, e, tag);
+                    }
+                }
             } else {
                 if (e == null) {
                     print(MLEVEL.DEBUG, obj, e, tag);
@@ -201,7 +235,19 @@ public class L {
     public static void i(String tag, Object obj, Throwable e) {
         if (obj != null) {
             if (obj instanceof String) {
-                print(MLEVEL.INFO, (String)obj, e, tag);
+
+                String src = (String)obj;
+                try {
+                    JSONObject oo = new JSONObject(src);
+                    print(MLEVEL.INFO, oo, e, tag);
+                } catch (JSONException e1) {
+                    try {
+                        JSONArray arr = new JSONArray(src);
+                        print(MLEVEL.INFO, arr, e, tag);
+                    } catch (JSONException e2) {
+                        print(MLEVEL.INFO, src, e, tag);
+                    }
+                }
             } else {
                 if (e == null) {
                     print(MLEVEL.INFO, obj, e, tag);
@@ -219,7 +265,18 @@ public class L {
     public static void w(String tag, Object obj, Throwable e) {
         if (obj != null) {
             if (obj instanceof String) {
-                print(MLEVEL.WARN, (String)obj, e, tag);
+                String src = (String)obj;
+                try {
+                    JSONObject oo = new JSONObject(src);
+                    print(MLEVEL.WARN, oo, e, tag);
+                } catch (JSONException e1) {
+                    try {
+                        JSONArray arr = new JSONArray(src);
+                        print(MLEVEL.WARN, arr, e, tag);
+                    } catch (JSONException e2) {
+                        print(MLEVEL.WARN, src, e, tag);
+                    }
+                }
             } else {
                 if (e == null) {
                     print(MLEVEL.WARN, obj, e, tag);
@@ -237,7 +294,18 @@ public class L {
     public static void e(String tag, Object obj, Throwable e) {
         if (obj != null) {
             if (obj instanceof String) {
-                print(MLEVEL.ERROR, (String)obj, e, tag);
+                String src = (String)obj;
+                try {
+                    JSONObject oo = new JSONObject(src);
+                    print(MLEVEL.ERROR, oo, e, tag);
+                } catch (JSONException e1) {
+                    try {
+                        JSONArray arr = new JSONArray(src);
+                        print(MLEVEL.ERROR, arr, e, tag);
+                    } catch (JSONException e2) {
+                        print(MLEVEL.ERROR, src, e, tag);
+                    }
+                }
             } else {
                 if (e == null) {
                     print(MLEVEL.ERROR, obj, e, tag);
@@ -661,6 +729,7 @@ public class L {
         char llast = '\0';
         char current = '\0';
         int indent = 0;
+
         for (int i = 0; i < jsonStr.length(); i++) {
             llast = last;
             last = current;
@@ -680,7 +749,7 @@ public class L {
                     addIndentBlank(sb, indent);
                     break;
                 case '"':
-                    if (last == ',' && llast == '}') {
+                    if ((last == ',' && llast == '}') || (last == ',' && llast != ',')) {
                         sb.append('\n');
                         addIndentBlank(sb, indent);
                     }
@@ -701,16 +770,8 @@ public class L {
 
                             break;
                         case ']':
-                            // 支持JsonArray
                             sb.append('\n');
                             addIndentBlank(sb, indent);
-                            break;
-                        case '"':
-                            // 支持json Value里多个,的
-                            if (llast != ':') {
-                                sb.append('\n');
-                                addIndentBlank(sb, indent);
-                            }
                             break;
 
                         default:

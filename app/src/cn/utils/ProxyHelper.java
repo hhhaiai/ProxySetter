@@ -11,15 +11,35 @@ import android.net.ProxyInfo;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.os.Build;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * @Copyright © 2017 sanbo Inc. All rights reserved.
  * @Description: 代理设置取消.
  * @Version: 1.0
  * @Create: 2017年8月21日 上午11:15:34
- * @author: sanbo
+ * @author: sanbo(转载/使用.请保留原作者)
  */
 public class ProxyHelper {
+
+    public static JSONObject getProxyInfo(Context context) {
+        JSONObject obj = new JSONObject();
+        WifiManager wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+        WifiConfiguration config = getCurrentWifiConfiguration(wifiManager);
+        try {
+            if (Build.VERSION.SDK_INT >= 21) {
+                ProxyInfo info = getProxyInfoFor5x(config);
+                obj.put("host", info.getHost());
+                obj.put("port", info.getPort());
+            } else {
+                obj = getProxyInfoFor34x(config);
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return obj;
+    }
 
     /**
      * 设置wifi接口
@@ -30,11 +50,9 @@ public class ProxyHelper {
      */
     public static void setProxy(Context context, String ip, int port) {
         if (Build.VERSION.SDK_INT < 21) {
-            setWifiProxySettings(context, ip, port);
-        } else if (Build.VERSION.SDK_INT >= 21 && Build.VERSION.SDK_INT < 25) {
-            setWifiProxyFor5x(context, ip, port);
+            setWifiProxySettingsFor34x(context, ip, port);
         } else {
-            setWifiProxyFor7x(context, ip, port);
+            setWifiProxyFor5x(context, ip, port);
         }
     }
 
@@ -47,8 +65,41 @@ public class ProxyHelper {
         if (Build.VERSION.SDK_INT >= 21) {
             resetSetHttpProxyFor5x(context);
         } else {
-            resetWifiProxySettings(context);
+            resetWifiProxySettingsFor34x(context);
         }
+    }
+
+    /**
+     * 3.x, 4.x系列查询代理
+     *
+     * @param config
+     * @return
+     */
+    private static JSONObject getProxyInfoFor34x(WifiConfiguration config) {
+        JSONObject obj = new JSONObject();
+        try {
+            if (null != config) {
+                Object linkProperties = getField(config, "linkProperties");
+                if (null != linkProperties) {
+                    Class<?> lpClass = Class.forName("android.net.LinkProperties");
+                    Method method = lpClass.getMethod("getHttpProxy");
+                    Object proxyProperties = method.invoke(linkProperties);
+                    if (proxyProperties != null) {
+                        Class<?> ppzz = Class.forName("android.net.ProxyProperties");
+                        Method getHost = ppzz.getMethod("getHost");
+                        Method getPort = ppzz.getMethod("getPort");
+
+                        String ip = (String)getHost.invoke(proxyProperties);
+                        int port = (Integer)getPort.invoke(proxyProperties);
+                        obj.put("host", ip);
+                        obj.put("port", port);
+                    }
+
+                }
+            }
+        } catch (Throwable e) {
+        }
+        return obj;
     }
 
     /**
@@ -58,10 +109,10 @@ public class ProxyHelper {
      * @param ip
      * @param port
      */
-    static void setWifiProxySettings(Context context, String ip, int port) {
+    static void setWifiProxySettingsFor34x(Context context, String ip, int port) {
         // get the current wifi configuration
         WifiManager manager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
-        WifiConfiguration config = GetCurrentWifiConfiguration(manager);
+        WifiConfiguration config = getCurrentWifiConfiguration(manager);
         if (null == config) { return; }
 
         try {
@@ -99,12 +150,10 @@ public class ProxyHelper {
             params[0] = proxySettings;
             setHttpProxy.invoke(linkProperties, params);
 
-            setProxySettings("STATIC", config);
+            setEnumField(config, "STATIC", "proxySettings");
 
             // save the settings
             manager.updateNetwork(config);
-            manager.disconnect();
-            manager.reconnect();
         } catch (Exception e) {
             L.e("setWifiProxySettings-->exception-->toString:" + e.toString() + ",message:" + e.getMessage());
         }
@@ -115,18 +164,12 @@ public class ProxyHelper {
      *
      * @param context
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    static void resetWifiProxySettings(Context context) {
-        // WifiManager manager = (WifiManager)
-        // context.getSystemService(Context.WIFI_SERVICE);
-        // WifiConfiguration config = GetCurrentWifiConfiguration(manager);
-        // if (null == config)
-        // return;
+    static void resetWifiProxySettingsFor34x(Context context) {
         WifiManager manager = null;
         WifiConfiguration config = null;
         try {
             manager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
-            config = GetCurrentWifiConfiguration(manager);
+            config = getCurrentWifiConfiguration(manager);
             if (null == config) { return; }
         } catch (Exception e) {
             L.e(e);
@@ -150,68 +193,31 @@ public class ProxyHelper {
             params[0] = null;
             setHttpProxy.invoke(linkProperties, params);
 
-            setProxySettings("NONE", config);
+            setEnumField(config, "NONE", "proxySettings");
 
             // save the config
             manager.updateNetwork(config);
-            manager.disconnect();
-            manager.reconnect();
         } catch (Exception e) {
         }
     }
 
-    static Object getField(Object obj, String name)
-        throws SecurityException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
-        if (obj == null) {
-            return null;
-        }
-        Field f = obj.getClass().getField(name);
-        Object out = f.get(obj);
-        return out;
-    }
+    /************************************************************************/
+    /****************************API21以上设置代理***************************/
+    /************************************************************************/
 
-    static Object getDeclaredField(Object obj, String name) {
-        if (obj == null) {
-            return null;
-        }
-        Object out = null;
+    @TargetApi(21)
+    public static ProxyInfo getProxyInfoFor5x(WifiConfiguration configuration) {
         try {
-            Field f = obj.getClass().getDeclaredField(name);
-            f.setAccessible(true);
-            out = f.get(obj);
-        } catch (Exception e) {
-            e.printStackTrace();
+            if (configuration != null) {
+                Class<?> clazz = Class.forName("android.net.wifi.WifiConfiguration");
+                Method method = clazz.getMethod("getHttpProxy");
+                ProxyInfo info = (ProxyInfo)method.invoke(configuration);
+                return info;
+            }
+        } catch (Throwable e) {
         }
-        return out;
+        return null;
     }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    static void setEnumField(Object obj, String value, String name)
-        throws SecurityException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
-        Field f = obj.getClass().getField(name);
-        f.set(obj, Enum.valueOf((Class<Enum>)f.getType(), value));
-    }
-
-    static void setProxySettings(String assign, WifiConfiguration wifiConf)
-        throws SecurityException, IllegalArgumentException, NoSuchFieldException, IllegalAccessException {
-        setEnumField(wifiConf, assign, "proxySettings");
-    }
-
-    static WifiConfiguration GetCurrentWifiConfiguration(WifiManager manager) {
-        if (!manager.isWifiEnabled()) { return null; }
-
-        List<WifiConfiguration> configurationList = manager.getConfiguredNetworks();
-        WifiConfiguration configuration = null;
-        int cur = manager.getConnectionInfo().getNetworkId();
-        for (int i = 0; i < configurationList.size(); ++i) {
-            WifiConfiguration wifiConfiguration = configurationList.get(i);
-            if (wifiConfiguration.networkId == cur) { configuration = wifiConfiguration; }
-        }
-
-        return configuration;
-    }
-
-    /****************************/
 
     /**
      * 5.x取消代理设置
@@ -223,27 +229,32 @@ public class ProxyHelper {
         try {
             WifiManager wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
             WifiConfiguration configuration = getCurrentWifiConfiguration(wifiManager);
+
+            ProxyInfo info = getProxyInfoFor5x(configuration);
+            if (info != null) {
+                if (info.getHost() == null && info.getPort() == 0) {
+                    L.wtf("resetSetHttpProxyFor5x(). 没有设置代理....");
+                    return;
+                }
+            }
+
             mInfo = ProxyInfo.buildDirectProxy(null, 0);
             if (configuration != null) {
                 Class<?> clazz = Class.forName("android.net.wifi.WifiConfiguration");
                 Class<?> parmars = Class.forName("android.net.ProxyInfo");
                 Method method = clazz.getMethod("setHttpProxy", parmars);
                 method.invoke(configuration, mInfo);
-                Object mIpConfiguration = getDeclaredFieldObject(configuration, "mIpConfiguration");
+                Object mIpConfiguration = getDeclaredField(configuration, "mIpConfiguration");
                 setEnumField(mIpConfiguration, "NONE", "proxySettings");
                 setDeclardFildObject(configuration, "mIpConfiguration", mIpConfiguration);
 
                 // 保存设置
                 wifiManager.updateNetwork(configuration);
-                wifiManager.disconnect();
-                wifiManager.reconnect();
             }
         } catch (Exception e) {
         }
 
     }
-
-
 
     /**
      * 5.x 系列设置代理
@@ -258,33 +269,85 @@ public class ProxyHelper {
         try {
             WifiManager wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
             WifiConfiguration config = getCurrentWifiConfiguration(wifiManager);
+            ProxyInfo info = getProxyInfoFor5x(config);
+            if (info != null) {
+                String s = info.getHost();
+                int p = info.getPort();
+                if (p == port && s.equals(host)) {
+                    L.wtf("setWifiProxyFor5x(). 已经设置相同代理...");
+                    return;
+                }
+            }
             mInfo = ProxyInfo.buildDirectProxy(host, port);
             if (config != null) {
                 Class<?> clazz = Class.forName("android.net.wifi.WifiConfiguration");
                 Class<?> parmars = Class.forName("android.net.ProxyInfo");
                 Method method = clazz.getMethod("setHttpProxy", parmars);
                 method.invoke(config, mInfo);
-                Object mIpConfiguration = getDeclaredFieldObject(config, "mIpConfiguration");
+                Object mIpConfiguration = getDeclaredField(config, "mIpConfiguration");
 
                 setEnumField(mIpConfiguration, "STATIC", "proxySettings");
                 setDeclardFildObject(config, "mIpConfiguration", mIpConfiguration);
                 // save the settings
                 wifiManager.updateNetwork(config);
-                wifiManager.disconnect();
-                wifiManager.reconnect();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable e) {
+            L.e(e);
         }
-
     }
 
-    static Object getDeclaredFieldObject(Object obj, String name)
+    @TargetApi(21)
+    public static void setWifiProxyFor5xPlanB(Context context) {
+        WifiManager manager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+        WifiConfiguration config = getCurrentWifiConfiguration(manager);
+        try {
+            if (null != config) {
+                Class proxySettings = Class.forName("android.net.IpConfiguration$ProxySettings");
+                Class[] setProxyParams = new Class[2];
+                setProxyParams[0] = proxySettings;
+                setProxyParams[1] = ProxyInfo.class;
+
+                Method setProxy = config.getClass().getDeclaredMethod("setProxy", setProxyParams);
+                setProxy.setAccessible(true);
+
+                ProxyInfo desiredProxy = ProxyInfo.buildDirectProxy("30.30.142.01", 30);
+
+                Object[] methodParams = new Object[2];
+                methodParams[0] = Enum.valueOf(proxySettings, "STATIC");
+                methodParams[1] = desiredProxy;
+
+                setProxy.invoke(config, methodParams);
+
+                // save the settings
+                manager.updateNetwork(config);
+            }
+        } catch (Throwable e) {
+        }
+    }
+
+    /**
+     * 获取当前的Wifi连接
+     *
+     * @param wifiManager
+     * @return
+     */
+    static WifiConfiguration getCurrentWifiConfiguration(WifiManager wifiManager) {
+        if (!wifiManager.isWifiEnabled()) { return null; }
+        List<WifiConfiguration> configurationList = wifiManager.getConfiguredNetworks();
+        WifiConfiguration configuration = null;
+        int cur = wifiManager.getConnectionInfo().getNetworkId();
+        // Log.d("当前wifi连接信息",wifiManager.getConnectionInfo().toString());
+        for (int i = 0; i < configurationList.size(); ++i) {
+            WifiConfiguration wifiConfiguration = configurationList.get(i);
+            if (wifiConfiguration.networkId == cur) { configuration = wifiConfiguration; }
+        }
+        return configuration;
+    }
+
+    static void setEnumField(Object obj, String value, String name)
         throws SecurityException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
-        Field f = obj.getClass().getDeclaredField(name);
-        f.setAccessible(true);
-        Object out = f.get(obj);
-        return out;
+        Field f = obj.getClass().getField(name);
+        f.set(obj, Enum.valueOf((Class<Enum>)f.getType(), value));
     }
 
     static void setDeclardFildObject(Object obj, String name, Object object) {
@@ -302,86 +365,33 @@ public class ProxyHelper {
         }
     }
 
-    // 获取当前的Wifi连接
-    static WifiConfiguration getCurrentWifiConfiguration(WifiManager wifiManager) {
-        if (!wifiManager.isWifiEnabled()) { return null; }
-        List<WifiConfiguration> configurationList = wifiManager.getConfiguredNetworks();
-        WifiConfiguration configuration = null;
-        int cur = wifiManager.getConnectionInfo().getNetworkId();
-        // Log.d("当前wifi连接信息",wifiManager.getConnectionInfo().toString());
-        for (int i = 0; i < configurationList.size(); ++i) {
-            WifiConfiguration wifiConfiguration = configurationList.get(i);
-            if (wifiConfiguration.networkId == cur) { configuration = wifiConfiguration; }
+    static Object getDeclaredField(Object obj, String name) {
+        if (obj == null) {
+            return null;
         }
-        return configuration;
-    }
-
-
-    /*************************************/
-    /**
-     * 5.x取消代理设置
-     */
-    @TargetApi(24)
-    static void resetSetHttpProxyFor7x(Context context) {
-
-        ProxyInfo mInfo = null;
+        Object out = null;
         try {
-            WifiManager wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
-            WifiConfiguration configuration = getCurrentWifiConfiguration(wifiManager);
-            mInfo = ProxyInfo.buildDirectProxy(null, 0);
-            if (configuration != null) {
-                Class<?> clazz = Class.forName("android.net.wifi.WifiConfiguration");
-                Class<?> parmars = Class.forName("android.net.ProxyInfo");
-                Method method = clazz.getMethod("setHttpProxy", parmars);
-                method.invoke(configuration, mInfo);
-                Object mIpConfiguration = getDeclaredFieldObject(configuration, "mIpConfiguration");
-                setEnumField(mIpConfiguration, "NONE", "proxySettings");
-                setDeclardFildObject(configuration, "mIpConfiguration", mIpConfiguration);
-
-                // 保存设置
-                wifiManager.updateNetwork(configuration);
-                wifiManager.disconnect();
-                wifiManager.reconnect();
-            }
-        } catch (Exception e) {
-        }
-
-    }
-
-
-
-    /**
-     * 5.x 系列设置代理
-     *
-     * @param context
-     * @param host
-     * @param port
-     */
-    @TargetApi(24)
-    static void setWifiProxyFor7x(Context context, String host, int port) {
-        ProxyInfo mInfo = null;
-        try {
-            WifiManager wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
-            WifiConfiguration config = getCurrentWifiConfiguration(wifiManager);
-            mInfo = ProxyInfo.buildDirectProxy(host, port);
-            if (config != null) {
-                Class<?> clazz = Class.forName("android.net.wifi.WifiConfiguration");
-                Class<?> parmars = Class.forName("android.net.ProxyInfo");
-                Method method = clazz.getMethod("setHttpProxy", parmars);
-                method.invoke(config, mInfo);
-                Object mIpConfiguration = getDeclaredFieldObject(config, "mIpConfiguration");
-
-                setEnumField(mIpConfiguration, "STATIC", "proxySettings");
-                setDeclardFildObject(config, "mIpConfiguration", mIpConfiguration);
-                // save the settings
-                wifiManager.updateNetwork(config);
-                wifiManager.disconnect();
-                wifiManager.reconnect();
-            }
+            Field f = obj.getClass().getDeclaredField(name);
+            f.setAccessible(true);
+            out = f.get(obj);
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return out;
+    }
 
+    static Object getField(Object obj, String name) {
+        if (obj == null) {
+            return null;
+        }
+        Object out = null;
+        try {
+            Field f = obj.getClass().getField(name);
+            out = f.get(obj);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return out;
     }
 
 }

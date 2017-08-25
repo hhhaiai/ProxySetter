@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context="cn.proxy.updater.MainActivity" >
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                tools:context="cn.proxy.updater.MainActivity">
+
     <TextView
         android:id="@+id/tvIp"
         android:layout_width="wrap_content"
@@ -13,7 +14,8 @@
         android:layout_marginStart="53dp"
         android:layout_marginTop="41dp"
         android:text="代理IP:"
-        android:textSize="20dp" />
+        android:textSize="20dp"/>
+
     <EditText
         android:id="@+id/etIp"
         android:layout_width="150dp"
@@ -22,7 +24,8 @@
         android:layout_marginStart="22dp"
         android:layout_toEndOf="@+id/tvPort"
         android:onClick="onClick"
-        android:text="30.30.142.48" />
+        android:text="30.30.142.48"/>
+
     <TextView
         android:id="@+id/tvPort"
         android:layout_width="wrap_content"
@@ -31,7 +34,8 @@
         android:layout_below="@+id/tvIp"
         android:layout_marginTop="26dp"
         android:text="代理端口:"
-        android:textSize="20dp" />
+        android:textSize="20dp"/>
+
     <EditText
         android:id="@+id/etPort"
         android:layout_width="150dp"
@@ -40,25 +44,27 @@
         android:layout_alignBottom="@+id/tvPort"
         android:layout_alignStart="@+id/etIp"
         android:onClick="onClick"
-        android:text="8080" />
+        android:text="8080"/>
+
     <Button
         android:id="@+id/btnSetProxy"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignEnd="@+id/tvPort"
+        android:layout_alignEnd="@+id/tvIp"
         android:layout_below="@+id/etPort"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="29dp"
         android:onClick="onClick"
-        android:text="设置代理" />
+        android:text="设置代理"/>
+
     <Button
         android:id="@+id/btnCancleProxy"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@+id/btnReporrtError"
-        android:layout_alignEnd="@+id/etPort"
-        android:layout_marginEnd="17dp"
+        android:layout_toEndOf="@+id/btnReporrtError"
         android:onClick="onClick"
-        android:text="取消代理" />
+        android:text="取消代理"/>
+
     <Button
         android:id="@+id/btnReporrtError"
         android:layout_width="wrap_content"
@@ -68,5 +74,14 @@
         android:layout_marginStart="29dp"
         android:layout_marginTop="17dp"
         android:onClick="onClick"
-        android:text="有问题,邮件报告!" />
+        android:text="有问题,邮件报告!"/>
+
+    <Button
+        android:id="@+id/btnQuery"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/btnReporrtError"
+        android:layout_toEndOf="@+id/tvPort"
+        android:onClick="onClick"
+        android:text="查询代理"/>
 </RelativeLayout>

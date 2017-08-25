@@ -10,7 +10,7 @@ import android.os.Message;
  * @Description: 若指针handler工具类,使用方法:实现OnReceiveMessageListener接口,实例化HandlerHelper示例发消息即可
  * @Version: 1.0
  * @Create: 2017年8月24日 上午10:35:22
- * @author: sanbo
+ * @author: sanbo(转载/使用.请保留原作者)
  */
 public class HandlerHelper extends Handler {
     private static WeakReference<OnReceiveMessageListener> mListenerWeakReference;

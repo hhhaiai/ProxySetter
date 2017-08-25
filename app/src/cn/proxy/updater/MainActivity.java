@@ -2,7 +2,6 @@ package cn.proxy.updater;
 
 import android.app.Activity;
 import android.content.Context;
-import android.net.Proxy;
 import android.os.Bundle;
 import android.os.Message;
 import android.text.TextUtils;
@@ -13,13 +12,14 @@ import cn.utils.HandlerHelper;
 import cn.utils.HandlerHelper.OnReceiveMessageListener;
 import cn.utils.L;
 import cn.utils.ProxyHelper;
+import org.json.JSONObject;
 
 /**
  * @Copyright © 2017 sanbo Inc. All rights reserved.
  * @Description: 代理设置
  * @Version: 1.0
  * @Create: 2017年8月23日 下午5:43:25
- * @author: sanbo
+ * @author: sanbo(转载/使用.请保留原作者)
  */
 public class MainActivity extends Activity implements OnReceiveMessageListener {
     private HandlerHelper mHandler;
@@ -45,14 +45,20 @@ public class MainActivity extends Activity implements OnReceiveMessageListener {
                     mHandler.sendEmptyMessage(0);
                 }
                 break;
-            case R.id.btnCancleProxy:
+            case R.id.btnQuery:
                 if (mHandler != null) {
                     mHandler.sendEmptyMessage(1);
                 }
                 break;
-            case R.id.btnReporrtError:
+            case R.id.btnCancleProxy:
                 if (mHandler != null) {
                     mHandler.sendEmptyMessage(2);
+                }
+                break;
+
+            case R.id.btnReporrtError:
+                if (mHandler != null) {
+                    mHandler.sendEmptyMessage(3);
                 }
                 break;
 
@@ -77,20 +83,28 @@ public class MainActivity extends Activity implements OnReceiveMessageListener {
                 if (TextUtils.isEmpty(ip) || TextUtils.isEmpty(port)) {
                     Toast.makeText(mContext, "请检查IP/端口,不可以为空", Toast.LENGTH_LONG).show();
                 } else {
-                    L.d("开始设置代理============================");
                     ProxyHelper.setProxy(mContext, ip.trim(), Integer.valueOf(port.trim()));
-                    L.d("开始设置代理============================");
                 }
 
                 break;
             case 1:
-                L.i(" handler receiver clear proxy");
-                ProxyHelper.clearProxy(mContext);
+                L.i(" handler receiver quert ip and port");
+                JSONObject result = ProxyHelper.getProxyInfo(this);
+                if (result != null) {
+                    if (result.length() > 0) {
+                        L.i(result.toString());
+                    } else {
+                        L.w("没有设置代理...");
+                    }
+                }
                 break;
             case 2:
+                L.i(" handler receiver clear proxy");
+                ProxyHelper.clearProxy(mContext);
+
+                break;
+            case 3:
                 L.i(" handler receiver report error");
-
-
                 break;
 
             default:
