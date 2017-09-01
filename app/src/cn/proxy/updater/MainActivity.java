@@ -12,6 +12,7 @@ import cn.utils.HandlerHelper;
 import cn.utils.HandlerHelper.OnReceiveMessageListener;
 import cn.utils.L;
 import cn.utils.ProxyHelper;
+import cn.utils.T;
 import org.json.JSONObject;
 
 /**
@@ -81,10 +82,10 @@ public class MainActivity extends Activity implements OnReceiveMessageListener {
                 String ip = mEtIP.getText().toString();
                 String port = mEtPort.getText().toString();
                 if (TextUtils.isEmpty(ip) || TextUtils.isEmpty(port)) {
-                    Toast.makeText(mContext, "请检查IP/端口,不可以为空", Toast.LENGTH_LONG).show();
+                    T.show(mContext, "请检查IP/端口,不可以为空", Toast.LENGTH_LONG);
                 } else {
-                    Toast.makeText(mContext, "将要设置代理:\r\n" + ip.trim() + ":" + Integer.valueOf(port.trim()),
-                        Toast.LENGTH_LONG).show();
+                    T.show(mContext, "将要设置代理:\r\n" + ip.trim() + ":" + Integer.valueOf(port.trim()),
+                        Toast.LENGTH_LONG);
                     ProxyHelper.setProxy(mContext, ip.trim(), Integer.valueOf(port.trim()));
                 }
 
@@ -96,17 +97,17 @@ public class MainActivity extends Activity implements OnReceiveMessageListener {
                     if (result.length() > 0) {
                         if (result.optInt("port") == -1) {
                             L.w("没有设置代理...");
-                            Toast.makeText(mContext, "没有设置代理...", Toast.LENGTH_LONG).show();
+                            T.show(mContext, "没有设置代理...", Toast.LENGTH_LONG);
                         } else {
                             L.i(result.toString());
 
-                            Toast.makeText(mContext,
-                                "代理地址:\r\n" + result.optString("host") + ":" + result.optInt("port"), Toast.LENGTH_LONG)
-                                .show();
+                            T.show(mContext,
+                                "代理地址:\r\n" + result.optString("host") + ":" + result.optInt("port"),
+                                Toast.LENGTH_LONG);
                         }
                     } else {
                         L.w("没有设置代理...");
-                        Toast.makeText(mContext, "没有设置代理...", Toast.LENGTH_LONG).show();
+                        T.show(mContext, "没有设置代理...", Toast.LENGTH_LONG);
                     }
                 }
                 break;
