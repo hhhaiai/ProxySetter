@@ -8,7 +8,7 @@ import android.os.Handler;
  * @Description: Toast同一管理类
  * @Version: 1.0
  * @Create: 2015年6月28日 下午1:41:16
- * @Author: sanbo
+ * @author: sanbo(转载/使用.请保留原作者)
  */
 public class T {
     public static final int LENGTH_SHORT = android.widget.Toast.LENGTH_SHORT;
