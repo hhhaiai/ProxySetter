@@ -56,6 +56,7 @@ public class ProxyHelper {
             setWifiProxySettingsFor34x(context, ip, port);
         } else if (Build.VERSION.SDK_INT >= 21 && Build.VERSION.SDK_INT <= 24) {
             setWifiProxyFor5x(context, ip, port);
+            //setWifiProxyFor5xPlanB(context, ip, port);
         } else {
             setWifiProxyFor7X(context, ip, port);
         }
@@ -306,9 +307,11 @@ public class ProxyHelper {
      * 拦截<code>WifiConfiguration.setProxy(ProxySettings settings, ProxyInfo proxy)</code>
      *
      * @param context
+     * @param ip
+     * @param port
      */
     @TargetApi(21)
-    public static void setWifiProxyFor5xPlanB(Context context) {
+    public static void setWifiProxyFor5xPlanB(Context context,String ip, int port) {
         WifiManager manager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
         WifiConfiguration config = getCurrentWifiConfiguration(manager);
         try {
@@ -321,7 +324,7 @@ public class ProxyHelper {
                 Method setProxy = config.getClass().getDeclaredMethod("setProxy", setProxyParams);
                 setProxy.setAccessible(true);
 
-                ProxyInfo desiredProxy = ProxyInfo.buildDirectProxy("30.30.142.01", 30);
+                ProxyInfo desiredProxy = ProxyInfo.buildDirectProxy(ip,port);
 
                 Object[] methodParams = new Object[2];
                 methodParams[0] = Enum.valueOf(proxySettings, "STATIC");
