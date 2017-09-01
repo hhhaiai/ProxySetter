@@ -95,7 +95,7 @@ public class MainActivity extends Activity implements OnReceiveMessageListener {
                 JSONObject result = ProxyHelper.getProxyInfo(this);
                 if (result != null) {
                     if (result.length() > 0) {
-                        if (result.optInt("port") == -1) {
+                        if (result.optInt("port") == -1 || result.optInt("port") == 0) {
                             L.w("没有设置代理...");
                             T.show(mContext, "没有设置代理...", Toast.LENGTH_LONG);
                         } else {
