@@ -24,7 +24,7 @@
         android:layout_marginStart="22dp"
         android:layout_toEndOf="@+id/tvPort"
         android:onClick="onClick"
-        android:text="30.30.142.48"/>
+        android:text="30.30.142.87"/>
 
     <TextView
         android:id="@+id/tvPort"
