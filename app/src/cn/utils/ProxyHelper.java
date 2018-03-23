@@ -12,6 +12,7 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiConfiguration.KeyMgmt;
 import android.net.wifi.WifiManager;
 import android.os.Build;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -26,7 +27,7 @@ public class ProxyHelper {
 
     public static JSONObject getProxyInfo(Context context) {
         JSONObject obj = new JSONObject();
-        WifiManager wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+        WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         WifiConfiguration config = getCurrentWifiConfiguration(wifiManager);
         try {
             if (Build.VERSION.SDK_INT >= 21) {
@@ -54,11 +55,18 @@ public class ProxyHelper {
     public static void setProxy(Context context, String ip, int port) {
         if (Build.VERSION.SDK_INT < 21) {
             setWifiProxySettingsFor34x(context, ip, port);
-        } else if (Build.VERSION.SDK_INT >= 21 && Build.VERSION.SDK_INT <= 24) {
+        } else if (Build.VERSION.SDK_INT >= 21) {
             setWifiProxyFor5x(context, ip, port);
-            //setWifiProxyFor5xPlanB(context, ip, port);
-        } else {
-            setWifiProxyFor7X(context, ip, port);
+            JSONObject obj = getProxyInfo(context);
+            if (obj != null && (!obj.optString("host").equals(ip) || obj.optInt("port") != port)) {
+                setWifiProxyFor5xPlanB(context, ip, port);
+
+                obj = getProxyInfo(context);
+                if (obj != null && (!obj.optString("host").equals(ip) || obj.optInt("port") != port)) {
+                    setWifiProxyFor7X(context, ip, port);
+                }
+            }
+
         }
     }
 
@@ -95,8 +103,8 @@ public class ProxyHelper {
                         Method getHost = ppzz.getMethod("getHost");
                         Method getPort = ppzz.getMethod("getPort");
 
-                        String ip = (String)getHost.invoke(proxyProperties);
-                        int port = (Integer)getPort.invoke(proxyProperties);
+                        String ip = (String) getHost.invoke(proxyProperties);
+                        int port = (Integer) getPort.invoke(proxyProperties);
                         obj.put("host", ip);
                         obj.put("port", port);
                     }
@@ -117,14 +125,18 @@ public class ProxyHelper {
      */
     static void setWifiProxySettingsFor34x(Context context, String ip, int port) {
         // get the current wifi configuration
-        WifiManager manager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+        WifiManager manager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         WifiConfiguration config = getCurrentWifiConfiguration(manager);
-        if (null == config) { return; }
+        if (null == config) {
+            return;
+        }
 
         try {
             // get the link properties from the wifi configuration
             Object linkProperties = getField(config, "linkProperties");
-            if (null == linkProperties) { return; }
+            if (null == linkProperties) {
+                return;
+            }
 
             // get the setHttpProxy method for LinkProperties
             Class<?> proxyPropertiesClass = Class.forName("android.net.ProxyProperties");
@@ -174,9 +186,11 @@ public class ProxyHelper {
         WifiManager manager = null;
         WifiConfiguration config = null;
         try {
-            manager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+            manager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
             config = getCurrentWifiConfiguration(manager);
-            if (null == config) { return; }
+            if (null == config) {
+                return;
+            }
         } catch (Exception e) {
             L.e(e);
         }
@@ -184,7 +198,9 @@ public class ProxyHelper {
         try {
             // get the link properties from the wifi configuration
             Object linkProperties = getField(config, "linkProperties");
-            if (null == linkProperties) { return; }
+            if (null == linkProperties) {
+                return;
+            }
 
             // get the setHttpProxy method for LinkProperties
             Class proxyPropertiesClass = Class.forName("android.net.ProxyProperties");
@@ -217,7 +233,7 @@ public class ProxyHelper {
             if (configuration != null) {
                 Class<?> clazz = Class.forName("android.net.wifi.WifiConfiguration");
                 Method method = clazz.getMethod("getHttpProxy");
-                ProxyInfo info = (ProxyInfo)method.invoke(configuration);
+                ProxyInfo info = (ProxyInfo) method.invoke(configuration);
                 return info;
             }
         } catch (Throwable e) {
@@ -233,8 +249,8 @@ public class ProxyHelper {
 
         ProxyInfo mInfo = null;
         try {
-            WifiManager wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
-            WifiConfiguration configuration = getCurrentWifiConfiguration(wifiManager);
+            WifiManager manager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            WifiConfiguration configuration = getCurrentWifiConfiguration(manager);
 
             ProxyInfo info = getProxyInfoFor5x(configuration);
             if (info != null) {
@@ -255,7 +271,9 @@ public class ProxyHelper {
                 setDeclardFildObject(configuration, "mIpConfiguration", mIpConfiguration);
 
                 // 保存设置
-                wifiManager.updateNetwork(configuration);
+                manager.updateNetwork(configuration);
+//                manager.disconnect();
+//                manager.reconnect();
             }
         } catch (Exception e) {
         }
@@ -274,8 +292,8 @@ public class ProxyHelper {
     static void setWifiProxyFor5x(Context context, String host, int port) {
         ProxyInfo mInfo = null;
         try {
-            WifiManager wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
-            WifiConfiguration config = getCurrentWifiConfiguration(wifiManager);
+            WifiManager manager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            WifiConfiguration config = getCurrentWifiConfiguration(manager);
             ProxyInfo info = getProxyInfoFor5x(config);
             if (info != null) {
                 String s = info.getHost();
@@ -296,7 +314,9 @@ public class ProxyHelper {
                 setEnumField(mIpConfiguration, "STATIC", "proxySettings");
                 setDeclardFildObject(config, "mIpConfiguration", mIpConfiguration);
                 // save the settings
-                wifiManager.updateNetwork(config);
+                manager.updateNetwork(config);
+//                manager.disconnect();
+//                manager.reconnect();
             }
         } catch (Throwable e) {
             L.e(e);
@@ -311,8 +331,8 @@ public class ProxyHelper {
      * @param port
      */
     @TargetApi(21)
-    public static void setWifiProxyFor5xPlanB(Context context,String ip, int port) {
-        WifiManager manager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+    public static void setWifiProxyFor5xPlanB(Context context, String ip, int port) {
+        WifiManager manager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         WifiConfiguration config = getCurrentWifiConfiguration(manager);
         try {
             if (null != config) {
@@ -324,7 +344,7 @@ public class ProxyHelper {
                 Method setProxy = config.getClass().getDeclaredMethod("setProxy", setProxyParams);
                 setProxy.setAccessible(true);
 
-                ProxyInfo desiredProxy = ProxyInfo.buildDirectProxy(ip,port);
+                ProxyInfo desiredProxy = ProxyInfo.buildDirectProxy(ip, port);
 
                 Object[] methodParams = new Object[2];
                 methodParams[0] = Enum.valueOf(proxySettings, "STATIC");
@@ -334,6 +354,8 @@ public class ProxyHelper {
 
                 // save the settings
                 manager.updateNetwork(config);
+//                manager.disconnect();
+//                manager.reconnect();
             }
         } catch (Throwable e) {
         }
@@ -347,7 +369,7 @@ public class ProxyHelper {
      * @param ip
      */
     public static void setWifiProxyFor7X(Context context, String port, int ip) {
-        WifiManager manager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+        WifiManager manager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         WifiConfiguration config = getCurrentWifiConfiguration(manager);
         try {
             if (null != config) {
@@ -367,7 +389,7 @@ public class ProxyHelper {
 
                 ssa.invoke(config, mIpConfiguration);
 
-                L.i("=======>" + config.networkId);
+//                L.i("=======>" + config.networkId);
                 config.allowedKeyManagement.set(KeyMgmt.NONE);
                 // save the settings. failed  return -1
                 int res = manager.updateNetwork(config);
@@ -390,22 +412,26 @@ public class ProxyHelper {
      * @return
      */
     static WifiConfiguration getCurrentWifiConfiguration(WifiManager wifiManager) {
-        if (!wifiManager.isWifiEnabled()) { return null; }
+        if (!wifiManager.isWifiEnabled()) {
+            return null;
+        }
         List<WifiConfiguration> configurationList = wifiManager.getConfiguredNetworks();
         WifiConfiguration configuration = null;
         int cur = wifiManager.getConnectionInfo().getNetworkId();
         // Log.d("当前wifi连接信息",wifiManager.getConnectionInfo().toString());
         for (int i = 0; i < configurationList.size(); ++i) {
             WifiConfiguration wifiConfiguration = configurationList.get(i);
-            if (wifiConfiguration.networkId == cur) { configuration = wifiConfiguration; }
+            if (wifiConfiguration.networkId == cur) {
+                configuration = wifiConfiguration;
+            }
         }
         return configuration;
     }
 
     static void setEnumField(Object obj, String value, String name)
-        throws SecurityException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
+            throws SecurityException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
         Field f = obj.getClass().getField(name);
-        f.set(obj, Enum.valueOf((Class<Enum>)f.getType(), value));
+        f.set(obj, Enum.valueOf((Class<Enum>) f.getType(), value));
     }
 
     static void setDeclardFildObject(Object obj, String name, Object object) {
